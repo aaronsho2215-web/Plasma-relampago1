@@ -3,97 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Plasma Relámpago - El Templo del Trueno</title>
+    <title>Plasma Relámpago - Versión Épica</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; background-color: #000; overflow: hidden; touch-action: none; }
-        #game-container { width: 100vw; height: 100vh; }
-        .ui-panel { position: fixed; top: 10px; left: 10px; color: #00d4ff; font-family: 'Courier New', monospace; font-weight: bold; pointer-events: none; z-index: 10; text-shadow: 2px 2px #000; }
-        .controls { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 20; }
-        .btn { width: 80px; height: 80px; background: rgba(0, 150, 255, 0.2); border: 3px solid #00d4ff; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .btn-atk { border-color: #ff4444; background: rgba(255, 0, 0, 0.2); }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
+        .controls { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 20; }
+        .btn { width: 75px; height: 75px; background: rgba(0, 150, 255, 0.3); border: 2px solid #00d4ff; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; user-select: none; }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
-    <div class="ui-panel">HP: <span id="hp">❤❤❤</span> | CRISTALES: <span id="cr">0/1</span></div>
     <div class="controls">
-        <div style="display: flex; gap: 20px;"><div id="btnL" class="btn">◀</div><div id="btnR" class="btn">▶</div></div>
-        <div style="display: flex; gap: 20px;"><div id="btnA" class="btn btn-atk">⚔</div><div id="btnS" class="btn">▲</div></div>
+        <div style="display: flex; gap: 15px;"><div id="btnL" class="btn">◀</div><div id="btnR" class="btn">▶</div></div>
+        <div style="display: flex; gap: 15px;"><div id="btnA" class="btn" style="border-color:red">ATK</div><div id="btnS" class="btn">▲</div></div>
     </div>
 
 <script>
     const config = {
         type: Phaser.AUTO,
-        parent: 'game-container',
-        width: window.innerWidth,
-        height: window.innerHeight,
-        physics: { default: 'arcade', arcade: { gravity: { y: 1200 }, debug: false } },
+        width: window.innerWidth, height: window.innerHeight,
+        physics: { default: 'arcade', arcade: { gravity: { y: 1200 } } },
         scene: { preload: preload, create: create, update: update }
     };
 
     const game = new Phaser.Game(config);
-    let p, enes, plats, cris, jefe, mov = { l: false, r: false }, hp = 3, hasJump = false, jCount = 0;
+    let p, mov = { l: false, r: false }, hasJump = false;
 
     function preload() {
-        // AQUÍ CARGAREMOS TUS IMÁGENES ÉPICAS (MUESTRA)
-        this.load.image('fondo', 'https://labs.phaser.io/assets/skies/space3.png');
-        this.load.image('suelo', 'https://labs.phaser.io/assets/sprites/platform.png');
-        this.load.image('sabio', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('chispa', 'https://labs.phaser.io/assets/sprites/aqua_ball.png');
-        this.load.image('gema', 'https://labs.phaser.io/assets/sprites/gem.png');
-        this.load.image('boss', 'https://labs.phaser.io/assets/sprites/ghost.png');
+        // ENLACES DIRECTOS A ASSETS ÉPICOS (Para que no tengas que subir nada)
+        this.load.image('fondo', 'https://play.phaser.io/assets/skies/space3.png');
+        this.load.image('suelo', 'https://play.phaser.io/assets/sprites/platform.png');
+        this.load.spritesheet('sabio', 'https://play.phaser.io/assets/sprites/dude.png', { frameWidth: 32, frameHeight: 48 });
+        this.load.image('gema', 'https://play.phaser.io/assets/sprites/gem.png');
     }
 
     function create() {
-        // Creación del escenario largo
         this.add.tileSprite(1500, config.height/2, 3000, config.height, 'fondo').setScrollFactor(0.2);
+        let plats = this.physics.add.staticGroup();
+        for(let i=0; i<10; i++) { plats.create(i*400, config.height-30, 'suelo').setScale(2).refreshBody(); }
         
-        plats = this.physics.add.staticGroup();
-        for(let i=0; i<10; i++) { 
-            plats.create(i*400, config.height - 30, 'suelo').setScale(1.5).refreshBody(); 
-        }
-        plats.create(800, config.height - 200, 'suelo');
-        plats.create(1400, config.height - 350, 'suelo');
-
-        p = this.physics.add.sprite(100, config.height - 150, 'sabio').setScale(1.2);
+        p = this.physics.add.sprite(100, config.height-100, 'sabio').setScale(1.5);
         p.setCollideWorldBounds(true);
         this.physics.add.collider(p, plats);
 
+        this.anims.create({ key: 'camina', frames: this.anims.generateFrameNumbers('sabio', { start: 5, end: 8 }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'parado', frames: [{ key: 'sabio', frame: 4 }], frameRate: 20 });
+
         this.cameras.main.setBounds(0, 0, 3000, config.height);
-        this.cameras.main.startFollow(p, true, 0.1, 0.1);
+        this.cameras.main.startFollow(p);
 
-        // Enemigos y Cristal
-        enes = this.physics.add.group();
-        cris = this.physics.add.sprite(1400, config.height - 450, 'gema');
-        this.physics.add.collider(cris, plats);
-
-        jefe = this.physics.add.sprite(2800, config.height - 300, 'boss').setScale(2).setTint(0xff0000);
-        jefe.body.allowGravity = false;
-
-        // Lógica de colisión
-        this.physics.add.overlap(p, cris, () => { cris.destroy(); hasJump = true; document.getElementById('cr').innerText = "1/1"; p.setTint(0x00ffff); });
-        this.physics.add.overlap(p, enes, danio);
-        this.physics.add.overlap(p, jefe, (p, j) => { if(p.isAtk) j.destroy(); else danio(); });
-
-        // Botones con respuesta inmediata
-        const setBtn = (id, start, end) => {
+        // CONTROLES
+        const setB = (id, s, e) => {
             const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
-            el.addEventListener('touchend', (e) => { e.preventDefault(); if(end) end(); });
+            el.ontouchstart = (ev) => { ev.preventDefault(); s(); };
+            el.ontouchend = (ev) => { ev.preventDefault(); if(e) e(); };
         };
-
-        setBtn('btnL', () => { mov.l = true; p.flipX = true; }, () => mov.l = false);
-        setBtn('btnR', () => { mov.r = true; p.flipX = false; }, () => mov.r = false);
-        setBtn('btnS', () => { if(p.body.touching.down) { jCount = 1; p.setVelocityY(-600); } else if(hasJump && jCount === 1) { jCount = 2; p.setVelocityY(-500); } });
-        setBtn('btnA', () => { p.isAtk = true; p.setTint(0xffff00); setTimeout(() => { p.isAtk = false; p.clearTint(); }, 250); });
+        setB('btnL', () => { mov.l = true; p.flipX = true; }, () => mov.l = false);
+        setB('btnR', () => { mov.r = true; p.flipX = false; }, () => mov.r = false);
+        setB('btnS', () => { if(p.body.touching.down) p.setVelocityY(-600); });
+        setB('btnA', () => { p.setTint(0xff0000); setTimeout(() => p.clearTint(), 200); });
     }
 
-    function danio() { if(p.alpha === 1) { hp--; document.getElementById('hp').innerText = "❤".repeat(hp); p.setAlpha(0.5); if(hp<=0) location.reload(); setTimeout(()=>p.setAlpha(1), 1000); } }
-
     function update() {
-        if (mov.l) p.setVelocityX(-250); else if (mov.r) p.setVelocityX(250); else p.setVelocityX(0);
-        jefe.y = (config.height - 300) + Math.sin(this.time.now / 400) * 100;
+        if (mov.l) { p.setVelocityX(-200); p.play('camina', true); }
+        else if (mov.r) { p.setVelocityX(200); p.play('camina', true); }
+        else { p.setVelocityX(0); p.play('parado'); }
     }
 </script>
 </body>
